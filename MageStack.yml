@@ -65,7 +65,7 @@ redissessions:
   image: 'redis:latest'
 
 web:
-  image: 'tlongren/magento:latest'
+  image: 'byjord/magento:latest'
   deployment_strategy: high_availability
   links:
     - mysql
