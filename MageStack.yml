@@ -1,0 +1,75 @@
+db-vol-master:
+  image: 'ubuntu:latest'
+  command: 'sleep 2147483647'
+  mem_limit: 64m
+  volumes:
+    - '/var/lib/mysql_master:/var/lib/mysql'
+
+lb:
+  image: 'tutum/haproxy:latest'
+  links:
+    - web
+  ports:
+    - '80:80'
+  roles:
+    - global
+  target_num_containers: 2
+
+mysql:
+  image: 'tutum/mysql:latest'
+  environment:
+    - MYSQL_PASS=mysql_pass_change_me
+    - MYSQL_USER=user
+    - ON_CREATE_DB=mage
+    - REPLICATION_MASTER=True
+    - REPLICATION_PASS=rep_pass_change_me
+  mem_limit: 512m
+  ports:
+    - '3306:3306'
+  restart: always
+  volumes_from:
+    - db-vol-master
+
+mysql-slave:
+  image: 'tutum/mysql:latest'
+  deployment_strategy: high_availability
+  environment:
+    - MYSQL_PASS=mysql_pass_change_me
+    - MYSQL_USER=user
+    - ON_CREATE_DB=mage
+    - REPLICATION_PASS=rep_pass_change_me
+    - REPLICATION_SLAVE=True
+  links:
+    - mysql
+  mem_limit: 512m
+  ports:
+    - '3306'
+  restart: always
+
+mysql-slave-lb:
+  image: 'tutum/haproxy:latest'
+  links:
+    - mysql-slave
+  ports:
+    - '3307:3307'
+  roles:
+    - global
+
+redisadmin:
+  image: 'redis:latest'
+
+redisfpc:
+  image: 'redis:latest'
+
+redissessions:
+  image: 'redis:latest'
+
+web:
+  image: 'tlongren/magento:latest'
+  deployment_strategy: high_availability
+  links:
+    - mysql
+    - mysql-slave-lb
+    - redisadmin
+    - redisfpc
+    - redissessions
